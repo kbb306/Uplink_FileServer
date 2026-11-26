@@ -37,4 +37,25 @@ print('PASS: 0.7B2 reverse-index fix retained; wrong forward lookup not resurrec
 print('PASS: population occurs only after marker and layout validation')
 print('PASS: saved existing volumes cannot trigger population during normal browsing')
 print('PASS: native placement rules and native DataBank writes are used')
+
+# Root-only FILESERVER regression (Mac v0.16.1 required a fix for this).
+# A LAN with only DATA1=-1/0 FILESERVERs must use the original native bank,
+# without requiring UFS2 partition markers. Corrupt leftover markers must
+# still fail closed instead of exposing a potentially inconsistent disk.
+assert 'if(!l->num){' in block
+assert 'if(f && is_marker(f))return -14;' in block
+assert 'l->state=0;return 0;' in block
+assert block.index('if(!l->num){') < block.index('found=find_markers(bank,l);')
+row_start = s.index('static int __cdecl partition_row_scan(')
+row_end = s.index('static int first_native_boundary(', row_start)
+row_block = s[row_start:row_end]
+assert 'if(l.state==0)return g_original_row_scan(bank,row,data,size,memindex);' in row_block
+assert row_block.index('if(layout_result<0)') < row_block.index('if(l.state==0)return g_original_row_scan')
+placement_start = s.index('static int __attribute__((thiscall)) partition_find_valid(')
+placement_end = s.index('static int install_row_partitions(', placement_start)
+placement_block = s[placement_start:placement_end]
+assert 'if(resolve_layout(lan,(U32)bank,node,&l,0)<0)return -1;' in placement_block
+assert 'if(l.state==1){first=l.active_start;last=l.active_end;}' in placement_block
+print('PASS: Windows root-only FILESERVER uses native file rows and placement; stray markers fail closed')
+
 print('NOT TESTED: native runtime, file transfer, save/load on Windows')
