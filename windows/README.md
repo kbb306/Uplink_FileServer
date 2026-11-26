@@ -15,6 +15,24 @@
 - Any volume already containing `UFS2.` guard records is left exactly as it is: no regeneration, migration, or restoration of deleted files. Therefore previously initialized empty 0.7B2 test disks stay empty.
 - File copier and deleter use native Uplink DataBank objects/absolute memory indexes, as in 0.7B2.
 
+
+## Root-only FILESERVER LANs (no extra disk needed)
+
+The Windows 0.7C2 code **already implements** the equivalent of the macOS
+root-only fallback fix. A custom LAN containing only FILESERVERs with
+`Data1=-1` or `Data1=0` and no UFS2 markers uses the **original native
+DataBank and file-row enumerator**. Its main server and root-shared
+FILESERVERs see the same generated root files. No partition allocation or
+extra private-file generation is supposed to occur in that configuration.
+Unexpected UFS2 markers in a root-only layout remain an error, rather than
+being bypassed. A static regression guard for both native browsing and
+placement exists in `source/tools/test_integration_regressions.py`.
+
+**There is no new Windows DLL required for this fix.** The separate macOS
+v0.16.1 bug was not present in the Windows 0.7C2 path; do not overwrite a
+working DLL merely to mirror the Mac source change. This remains specific
+to the exact Steam Windows **1.55** binary fingerprint shown above.
+
 ## `Data1` storage settings
 
 | Data1 | Meaning |
